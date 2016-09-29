@@ -1,0 +1,65 @@
+#!/bin/sh
+
+COMMUNITY="public"
+HOST="192.168.1.254"
+SENSOROID="1.3.6.1.4.1.9.9.91.1.1.1.1.4"
+INVENTORYOID="1.3.6.1.2.1.47.1.1.1.1"
+INTERFACEOID="1.3.6.1.2.1.2.2.1"
+# INTERFACEID ala. cisco #show snmp mib ifmib ifindex
+
+DEBUG=false
+#DEBUG=true
+
+while echo $1 |grep "^-" >/dev/null
+do
+  case $1 in
+    "--debug" )
+      DEBUG=true
+      shift
+      ;;
+    "--help" | "-?" | "-h" | * )
+      echo Usage:
+      echo $0 "[OPTIONS] [<switch-or-router> [<oid> [<field-index>] ] ]"
+      echo OPTIONS:
+      echo "--help -? -h"
+      echo "--debug ;# print out the snmpwalk command before executing it"
+      exit
+      ;;
+  esac
+done
+
+HOST=$1
+
+if [ -z $HOST ]
+then
+  #echo Usage:
+  #echo $0 "<IP-ADDRESS>"
+  HOST="192.168.1.254"
+fi
+
+OID=$2
+if [ -z $OID ]
+then
+  OID=${INTERFACEOID}
+fi
+
+INDEX=$3
+if [ ! -z $INDEX ]
+then
+  INDEXOPT="-Is $INDEX"
+fi
+
+PREVINDEX2="not set"
+
+echo "snmpwalk -On -c $COMMUNITY -v2c $INDEXOPT $HOST $OID"
+snmpwalk -On -c $COMMUNITY -v2c $INDEXOPT $HOST $OID | sed 's/^[^ ]*\.\([^. ]*\)\.\([^. ]*\) /\1 \2 /' \
+| sort -n -k2 -k1 \
+| while read INDEX1 INDEX2 EQUAL TYPE VALUE
+do
+  if [ "${PREVINDEX2}x" != "${INDEX2}x" ]
+  then
+    echo
+  fi
+  echo $INDEX1 $INDEX2 $EQUAL $TYPE $VALUE
+  PREVINDEX2="$INDEX2"
+done
