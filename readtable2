@@ -1,0 +1,46 @@
+#!/bin/sh
+
+COMMUNITY="public"
+HOST="192.168.1.254"
+SENSOROID="1.3.6.1.4.1.9.9.91.1.1.1.1.4"
+INVENTORYOID="1.3.6.1.2.1.47.1.1.1.1"
+INTERFACEOID="1.3.6.1.2.1.2.2.1"
+
+DEBUG=false
+#DEBUG=true
+
+HOST=$1
+
+if [ -z $HOST ]
+then
+  #echo Usage:
+  #echo $0 "<IP-ADDRESS>"
+  HOST="192.168.1.254"
+fi
+
+OID=$2
+if [ -z $OID ]
+then
+  OID=${INTERFACEOID}
+fi
+
+INDEX=$3
+if [ ! -z $INDEX ]
+then
+  INDEXOPT="-Is $INDEX"
+fi
+
+PREVINDEX2="not set"
+
+echo "snmpwalk -On -c $COMMUNITY -v2c $INDEXOPT $HOST $OID" 1>&2
+snmpwalk -On -c $COMMUNITY -v2c $INDEXOPT $HOST $OID | sed 's/^'"\.${OID}\."'\([^. ]*\)\.\([^ ]*\) /\1 \2 /' \
+| sort -k2,2 -k1n \
+| while read INDEX1 INDEX2 EQUAL TYPE VALUE
+do
+  if [ "${PREVINDEX2}x" != "${INDEX2}x" ]
+  then
+    echo
+  fi
+  echo $INDEX1 $INDEX2 $EQUAL $TYPE $VALUE
+  PREVINDEX2="$INDEX2"
+done
