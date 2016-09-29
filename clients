@@ -1,0 +1,20 @@
+#!/bin/sh
+
+{
+ #insert headings
+ cat waptable \
+ | while read J1 J2 NAME JUNK
+ do
+   echo "0 0 0 0 0 $NAME"
+ done
+
+ ../readtable2 192.168.1.9 1.3.6.1.4.1.9.9.599.1.3.1.1 \
+ | grep "^8 " \
+ | sed -e 's/ \([^ ][^ ]\) \([^ ][^ ]\) \([^ ][^ ]\) \([^ ][^ ]\) \([^ ][^ ]\) \([^ ][^ ]\)/ \1:\2:\3:\4:\5:\6/g' \
+ | sed -f waptable.sed \
+ | while read F1 F2 STUFF
+   do
+     echo $F1 `../dec2hex $F2` $STUFF
+   done
+} \
+| sort -k6,6
