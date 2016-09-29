@@ -1,0 +1,54 @@
+#!/bin/sh
+
+#extract fields 5, 26 and 2 from the WAP table
+#2 0.38.203.209.143.0 = Hex-STRING: 00 22 BD 1A BF 31
+#5 0.38.203.209.143.0 = STRING: "DL-1142-216"
+#26 0.38.203.209.143.0 = Hex-STRING: 00 26 CB D1 8F 00
+
+# Ok.. Nevermind field 26.
+# Cisco Borked that in their latest version.
+# gotta find a workaround now using dec2hex.
+# Yuk.
+
+echo -e "\c" >waptable.sed
+
+../readtable2 192.168.1.9 1.3.6.1.4.1.9.9.513.1.1.1.1 \
+| grep -e "^2 " -e "^5 " -e "^20 " -e "^26 " -e "^$" \
+| sed -e 's/ \([^ ][^ ]\) \([^ ][^ ]\) \([^ ][^ ]\) \([^ ][^ ]\) \([^ ][^ ]\) \([^ ][^ ]\)/ \1:\2:\3:\4:\5:\6/g' \
+| while read FIELD DECIMAC EQ TYPE VALUE
+do
+  if [ "${FIELD}x" = "2x" ]
+  then
+    WAPMAC=$VALUE
+  fi
+
+  if [ "${FIELD}x" = "5x" ]
+  then
+    NAME=$VALUE
+  fi
+
+  if [ "${FIELD}x" = "20x" ]
+  then
+    if [ ${VALUE} = "5" ]
+    then
+      POWER=PwrNml${VALUE}
+    else
+      POWER=PwrLow${VALUE}
+    fi
+  fi
+
+  if [ "${FIELD}x" = "26x" ]
+  then
+    # this doesn't work anymore.
+    RADIOMAC=$VALUE
+    # so fix it
+    if [ "$RADIOMAC" = "00:00:00:00:00:00" ]
+    then
+      RADIOMAC=`../dec2hex $DECIMAC`
+    fi
+
+   echo " "$RADIOMAC $WAPMAC $NAME $J1 $POWER
+    echo "s/"$RADIOMAC"/"$RADIOMAC $NAME"/" >>waptable.sed
+  fi
+done \
+> waptable
