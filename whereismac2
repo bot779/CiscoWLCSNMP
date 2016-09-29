@@ -1,0 +1,29 @@
+#!/bin/sh
+
+if [ -z "$1" ]
+then
+  echo "Usage: $0 <wireless-client-mac-address>"
+  echo
+  exit
+fi
+
+DECMAC=`../mac2dec $@`
+#echo $DECMAC
+
+snmpwalk -v2c -c public -On 192.168.1.9 1.3.6.1.4.1.9.9.599.1.3.1.1.8.$DECMAC \
+ | sed -e 's/ \([^ ][^ ]\) \([^ ][^ ]\) \([^ ][^ ]\) \([^ ][^ ]\) \([^ ][^ ]\) \([^ ][^ ]\)/ \1:\2:\3:\4:\5:\6/g' \
+ | sed -f waptable.sed
+
+#exit
+
+# | fgrep 12.96.118.29.39.60 \
+
+snmpwalk -v2c -c public -On 192.168.1.9 1.3.6.1.4.1.14179.2.1.11.1.5 \
+| fgrep $DECMAC \
+| sed -e 's/\([^. ]*\.[^. ]*\.[^. ]*\.[^. ]*\.[^. ]*\.[^. ]*\)\(\.[^. ]*\.[^. ]* =\)/ \1 \2/' \
+| while read F1 MAC REST
+do
+  echo $F1 `../dec2hex $MAC` $REST
+done \
+| sed -f waptable.sed \
+| sort -r -n -k7,7
